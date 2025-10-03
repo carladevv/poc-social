@@ -1,0 +1,105 @@
+/* src/index.css */
+:root {
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #0b0d10;
+  color: #e8eef5;
+}
+
+.wrap {
+  max-width: 980px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+
+h1 {
+  margin-bottom: 12px;
+}
+
+.card {
+  background: #141922;
+  border: 1px solid #212838;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 0;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.col {
+  min-width: 200px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+input,
+select {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #2b3346;
+  background: #0f131a;
+  color: #e8eef5;
+}
+
+input[type="range"] {
+  padding: 0;
+}
+
+button {
+  padding: 8px 12px;
+  border: 1px solid #2b3346;
+  background: #0f131a;
+  color: #e8eef5;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button.primary {
+  background: #2d72ff;
+  border-color: #2d72ff;
+}
+
+.actions {
+  display: grid;
+  gap: 12px;
+}
+
+.log {
+  background: #0f131a;
+  padding: 12px;
+  border-radius: 8px;
+  min-height: 140px;
+}
+
+.logline {
+  padding: 4px 0;
+  border-bottom: 1px dashed #263048;
+}
+
+.logline:last-child {
+  border-bottom: none;
+}
+
+footer {
+  opacity: 0.8;
+  margin-top: 8px;
+}
