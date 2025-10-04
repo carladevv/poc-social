@@ -1,86 +1,81 @@
-# React + TypeScript + Vite
+# poc-social (Character Systems)
 
-This is a proof of concept for a dialogue/social system between user-created characters. It aims for maximum flexibility and variation while keeping the number of variables and constraints reasonable.
+## Overview
+This repo is built as **layered, SRP-first modules** (creator, dialogue, camp, etc.). Each module is headless/pure and exposes a small public API.
+
+### Current focus: Character Creator
+Headless system to define and validate characters for the sim: stats, personalities, likes/dislikes, pronouns, and an opaque appearance ref. No UI or persistence required.
 
 ## Folder structure
 
 ```bash
 src/
-  app/                      # App shell & routes (keeps React app wiring separate)
-    App.tsx
-    main.tsx
-  ui/                       # Pure presentational components (buttons, pickers, panels)
-    components/
-      Button.tsx
-      Field.tsx
-      Select.tsx
-      LogPanel.tsx
-      StatsMeter.tsx
-    screens/
-      CreateCharacterScreen.tsx
-      CampScreen.tsx
-  state/                    # App state (store + selectors), no domain logic
-    store.ts                # Zustand/Context or simple reducers
-    selectors.ts
-    types.ts                # UI-level state shapes only
-  domain/                   # Game domain, framework-agnostic (NO React imports here)
-    characters/
-      types.ts              # Character types only
-      factory.ts            # Create character from inputs
-      validators.ts         # (Optional) zod/yup validation for creation form
-    relationships/
-      types.ts              # Relationship types only
-      scoring.ts            # +/− relationship adjustments
-      decay.ts              # memory decay, mood expiry
-    memories/
-      types.ts
-      create.ts             # addMemory, compose memory text, tagging
-    actions/                # Mechanics for social actions (no UI)
-      types.ts              # SocialAction types only
-      success.ts            # successChance(...) ONLY
-      apply.ts              # How an action mutates pair state + memories
-    dialogue/               # Dialogue engine (selection + rendering), SRP-per-file
-      types.ts              # Template & rendering types only
-      gates.ts              # Template gating (conditions)
-      rank.ts               # (Optional) scoring/weighting when many templates match
-      render.ts             # Interpolate vars, pick lines, 3-sentence stitcher
-      engine.ts             # Public API: pickAndRender(ctx) using the above files
-      registry.ts           # Auto-load & index templates from templates/**
-      templates/            # Each template is its own file; grouped in folders
-        greetings/
-          casual.ts
-          formal.ts
-        activities/
-          sparring.ts
-          cooking.ts
-          archery.ts
-        social/
-          gift/
-            success.ts
-            fail.ts
-          boast.ts
-          offer_comfort.ts
-        memory/
-          callbacks.ts
-  data/                     # Static game data; no logic
-    schema/                 # Each schema in its own file
-      personalities.ts
-      activities.ts
-      moods.ts
-      socialActions.ts
-      relationshipLevels.ts
-      memoryWeights.ts
-    index.ts                # Re-export schemas; read-only constants
-    seeds/                  # Seed characters/world
-      npc.rook.ts
-      player.default.ts
-  lib/                      # Small generic utilities (no domain knowledge)
-    rng.ts                  # randomPick, weightedPick
-    time.ts                 # now(), clampMs, durations
-    strings.ts              # safeReplace, capitalize, etc.
-  config/
-    paths.d.ts              # (Optional) path aliases typings
-  styles/
-    index.css
+character_creator/
+  constants.ts # single source of truth for option lists & budgets
+  types.ts # Character, CharacterDraft, PronounSet, DeepPartial, etc.
+  errors.ts # ValidationError
+  validators.ts # business rules (no I/O)
+  factory.ts # createCharacter, updateCharacter (pure + monotonic timestamps)
+  repository.ts # in-memory repo (dev only)
+  index.ts # public API barrel
+tests/
+  character_creator.spec.ts
+```
 
+## Public API (import from `src/character_creator`)
+- **Constants:** `PERSONALITY_TYPES`, `DEFAULT_PRONOUN_SETS`, `ACTIVITIES`, `GIFTS`, `HOBBIES`, `STAT_KEYS`, `STAT_POINT_BUDGET`
+- **Types:** `Character`, `CharacterDraft`, `PronounSet`, `AppearanceRef`, `Stats`, `Personality`
+- **Errors:** `ValidationError`
+- **Factory:** `createCharacter(draft) -> Character`, `updateCharacter(character, partial) -> Character`
+- **Repo:** `createMemoryRepository() -> CharacterRepository`
+
+## Core invariants
+- Name required, ≤ 60 chars.
+- Pronouns require `label/subject/object/possessive/reflexive` (custom allowed).
+- Personalities from list and **primary ≠ secondary**.
+- Likes/Dislikes:
+  - **Activities:** exactly 1 like + 1 dislike.
+  - **Gifts:** exactly 2 likes + 2 dislikes.
+  - **Hobbies:** exactly 2 likes + 2 dislikes.
+  - No duplicates; an item can’t be both liked and disliked; must be from allowed lists.
+- Stats include `str/dex/wis/cha` and **sum to 10**, non-negative integers.
+- `appearance` is an opaque `AppearanceRef` (future system).
+- `updateCharacter` preserves invariants and guarantees **`updatedAt > previous`**.
+
+## Development
+```bash
+npm i
+npm i -D vitest @types/node ts-node
+```
+
+### Run tests:
+```bash
+npm test
+# or
+npm run test:watch
+```
+
+### Example usage:
+
+```ts
+import {
+  DEFAULT_PRONOUN_SETS,
+  createCharacter,
+  createMemoryRepository,
+} from "./src/character_creator";
+
+const repo = createMemoryRepository();
+
+const c = createCharacter({
+  name: "Alice of the Vale",
+  pronouns: { ...DEFAULT_PRONOUN_SETS[0] },
+  personalityPrimary: "gentle",
+  personalitySecondary: "fun",
+  appearance: { kind: "appearance_ref", id: "appearance:basic-elf-01" },
+  likes: { activities: ["archery"], gifts: ["blue_rose","fine_perfume"], hobbies: ["stargazing","writing_poetry"] },
+  dislikes:{ activities: ["guard_duty"], gifts: ["smooth_rock","warm_socks"], hobbies: ["strength_training","playing_lute"] },
+  stats: { str: 2, dex: 4, wis: 2, cha: 2 },
+});
+
+repo.add(c);
 ```
