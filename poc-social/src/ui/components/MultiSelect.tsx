@@ -16,9 +16,9 @@ export function MultiSelect(props: {
   }
 
   return (
-    <div className="grid2" style={{ gap: 8 }}>
+    <div className="checklist">
       {options.map((v) => (
-        <label key={v} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <label key={v} className="checkline">
           <input
             type="checkbox"
             checked={selected.includes(v)}

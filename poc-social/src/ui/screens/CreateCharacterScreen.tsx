@@ -38,55 +38,99 @@ export function CreateCharacterScreen(props: {
   return (
     <div className="wrap">
       <h1>PoC — Social System</h1>
+
       <section className="card">
-        <h2>Character Creation</h2>
+        <h2>Create a Character</h2>
 
-        <div className="grid2">
-          <label>
-            Name
-            <input value={name} onChange={(e) => onName(e.target.value)} />
+        <div className="form-vertical">
+          <label className="field">
+            <span className="label">Name</span>
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => onName(e.target.value)}
+              placeholder="e.g., Aria"
+            />
           </label>
 
-          <label>
-            Primary Personality
-            <select value={primary} onChange={(e) => onPrimary(e.target.value as PersonalityKey)}>
-              {personalityKeys.map((k) => <option key={k} value={k}>{k}</option>)}
+          <label className="field">
+            <span className="label">Primary personality</span>
+            <select
+              value={primary}
+              onChange={(e) => onPrimary(e.target.value as PersonalityKey)}
+            >
+              {personalityKeys.map((k) => (
+                <option key={k} value={k}>{k}</option>
+              ))}
             </select>
           </label>
 
-          <label>
-            Secondary Personality (optional)
-            <select value={secondary ?? ""} onChange={(e) => onSecondary((e.target.value || undefined) as any)}>
+          <label className="field">
+            <span className="label">Secondary personality (optional)</span>
+            <select
+              value={secondary ?? ""}
+              onChange={(e) => onSecondary((e.target.value || undefined) as any)}
+            >
               <option value="">—</option>
-              {personalityKeys.map((k) => <option key={k} value={k}>{k}</option>)}
+              {personalityKeys.map((k) => (
+                <option key={k} value={k}>{k}</option>
+              ))}
             </select>
+            <small className="hint">15% chance to speak in this voice.</small>
           </label>
 
-          <div />
-          <label>
-            Strength: {strength}
-            <input type="range" min={1} max={10} value={strength} onChange={(e) => onStrength(Number(e.target.value))} />
+          <label className="field">
+            <span className="label">Strength: {strength}</span>
+            <input
+              type="range" min={1} max={10}
+              value={strength}
+              onChange={(e) => onStrength(Number(e.target.value))}
+            />
           </label>
-          <label>
-            Charisma: {charisma}
-            <input type="range" min={1} max={10} value={charisma} onChange={(e) => onCharisma(Number(e.target.value))} />
+
+          <label className="field">
+            <span className="label">Charisma: {charisma}</span>
+            <input
+              type="range" min={1} max={10}
+              value={charisma}
+              onChange={(e) => onCharisma(Number(e.target.value))}
+            />
           </label>
+
+          <div className="field">
+            <span className="label">Favorite gifts (pick up to 2)</span>
+            <MultiSelect
+              options={[...preferences.favoriteGifts]}
+              selected={selectedGifts}
+              onChange={onGifts}
+              max={2}
+            />
+          </div>
+
+          <div className="field">
+            <span className="label">Hobby likes (pick up to 2)</span>
+            <MultiSelect
+              options={hobbyLikeOptions}
+              selected={selectedHobbies}
+              onChange={onHobbies}
+              max={2}
+            />
+          </div>
+
+          <div className="field">
+            <span className="label">Hobby dislikes (pick up to 2)</span>
+            <MultiSelect
+              options={hobbyDislikeOptions}
+              selected={selectedHobbyDislikes}
+              onChange={onHobbyDislikes}
+              max={2}
+            />
+            <small className="hint">You can’t select a hobby in both lists.</small>
+          </div>
+
+          <button className="primary" onClick={onStart}>Start → Interact with NPC</button>
         </div>
-
-        <h3>Favorite gifts (pick up to 2)</h3>
-        <MultiSelect options={[...preferences.favoriteGifts]} selected={selectedGifts} onChange={onGifts} max={2} />
-
-        <h3>Hobby likes (pick up to 2)</h3>
-        <MultiSelect options={hobbyLikeOptions} selected={selectedHobbies} onChange={onHobbies} max={2} />
-
-        <h3>Hobby dislikes (pick up to 2)</h3>
-        <MultiSelect options={hobbyDislikeOptions} selected={selectedHobbyDislikes} onChange={onHobbyDislikes} max={2} />
-
-        <button className="primary" onClick={onStart} style={{ marginTop: 12 }}>
-          Start → Interact with NPC
-        </button>
       </section>
-      <footer>Secondary personality: 15% chance to speak in that voice.</footer>
     </div>
   );
 }
