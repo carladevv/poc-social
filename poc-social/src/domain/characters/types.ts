@@ -20,10 +20,14 @@ export type Character = {
   likes: string[];
   dislikes: string[];
   favoriteGifts: string[];
+  flavorLikes?: string[];
+  flavorDislikes?: string[];
+
   currentMood?: MoodKey;
   moodExpiresAt?: number;
   memories: Memory[];
 };
+
 
 export type PairState = {
   aId: string;

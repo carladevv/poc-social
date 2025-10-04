@@ -5,77 +5,83 @@ import { ActionGift } from "@ui/components/ActionGift";
 import { ActionMood } from "@ui/components/ActionMood";
 import { ActionBoast } from "@ui/components/ActionBoast";
 import { LogPanel } from "@ui/components/LogPanel";
+import { ActionShareHobby } from "@ui/components/ActionShareHobby";
+
 
 export function CampScreen(props: {
-  player: Character;
-  npc: Character;
-  pair: PairState;
-  relationshipLevel: string;
-  activityOptions: ReadonlyArray<{ key: ActivityKey; label: string }>;
-  moodKeys: ReadonlyArray<MoodKey>;
-  logs: ReadonlyArray<{ id: string; text: string }>;
-  onTick: () => void;
-  onGreeting: () => void;
-  onDiscuss: (a: ActivityKey) => void;
-  onGift: (g: string) => void;
-  onBoast: () => void;
-  onMoodSet: (m?: MoodKey) => void;
-  onMoodCheck: () => void;
+    player: Character;
+    npc: Character;
+    pair: PairState;
+    relationshipLevel: string;
+    activityOptions: ReadonlyArray<{ key: ActivityKey; label: string }>;
+    moodKeys: ReadonlyArray<MoodKey>;
+    logs: ReadonlyArray<{ id: string; text: string }>;
+    onTick: () => void;
+    onGreeting: () => void;
+    onDiscuss: (a: ActivityKey) => void;
+    onGift: (g: string) => void;
+    onBoast: () => void;
+    onMoodSet: (m?: MoodKey) => void;
+    onMoodCheck: () => void;
+    onShareHobby: (hobby: string) => void;
+
 }) {
-  const { player, npc, pair, relationshipLevel, activityOptions, moodKeys, logs, onTick, onGreeting, onDiscuss, onGift, onBoast, onMoodSet, onMoodCheck } = props;
+    const { player, npc, pair, relationshipLevel, activityOptions, moodKeys, logs, onTick, onGreeting, onDiscuss, onGift, onBoast, onMoodSet, onMoodCheck, onShareHobby } = props;
 
-  // gift list (union of known defaults + favorites)
-  const giftOptions = Array.from(new Set<string>([
-    "polished_stone","fresh_herbs","carved_token","quality_oil","good_rope","sharp_knife",
-    ...player.favoriteGifts, ...npc.favoriteGifts
-  ]));
+    // gift list (union of known defaults + favorites)
+    const giftOptions = Array.from(new Set<string>([
+        "polished_stone", "fresh_herbs", "carved_token", "quality_oil", "good_rope", "sharp_knife",
+        ...player.favoriteGifts, ...npc.favoriteGifts
+    ]));
 
-  return (
-    <div className="wrap">
-      <h1>PoC — Social System</h1>
+    return (
+        <div className="wrap">
+            <h1>PoC — Social System</h1>
 
-      <section className="card">
-        <h2>Camp</h2>
-        <div className="row">
-          <div className="col">
-            <h3>Player</h3>
-            <p><b>{player.name}</b> ({player.primaryPersonality})</p>
-            <p>STR {player.stats.strength} | CHA {player.stats.charisma}</p>
-            <p>Mood: {player.currentMood ?? "—"}</p>
-          </div>
-          <div className="col">
-            <h3>NPC</h3>
-            <p><b>{npc.name}</b> ({npc.primaryPersonality})</p>
-            <p>STR {npc.stats.strength} | CHA {npc.stats.charisma}</p>
-            <p>Mood: {npc.currentMood ?? "—"}</p>
-          </div>
-          <div className="col">
-            <h3>Relationship</h3>
-            <p>Score: <b>{pair.relationshipScore}</b></p>
-            <p>Level: <b>{relationshipLevel}</b></p>
-            <button onClick={onTick}>Tick (expire moods / decay memories)</button>
-          </div>
+            <section className="card">
+                <h2>Camp</h2>
+                <div className="row">
+                    <div className="col">
+                        <h3>Player</h3>
+                        <p><b>{player.name}</b> ({player.primaryPersonality})</p>
+                        <p>STR {player.stats.strength} | CHA {player.stats.charisma}</p>
+                        <p>Mood: {player.currentMood ?? "—"}</p>
+                    </div>
+                    <div className="col">
+                        <h3>NPC</h3>
+                        <p><b>{npc.name}</b> ({npc.primaryPersonality})</p>
+                        <p>STR {npc.stats.strength} | CHA {npc.stats.charisma}</p>
+                        <p>Mood: {npc.currentMood ?? "—"}</p>
+                    </div>
+                    <div className="col">
+                        <h3>Relationship</h3>
+                        <p>Score: <b>{pair.relationshipScore}</b></p>
+                        <p>Level: <b>{relationshipLevel}</b></p>
+                        <button onClick={onTick}>Tick (expire moods / decay memories)</button>
+                    </div>
+                </div>
+            </section>
+
+            <section className="card">
+                <h2>Actions</h2>
+                <div className="actions">
+                    <button onClick={onGreeting}>Greeting</button>
+
+                    <ActionDiscuss options={activityOptions} onChoose={onDiscuss} />
+
+                    <ActionGift gifts={giftOptions} onChoose={onGift} />
+
+                    <ActionBoast onClick={onBoast} />
+
+                    <ActionMood moods={moodKeys} npcMood={npc.currentMood} onSet={onMoodSet} />
+
+                    <ActionShareHobby hobbies={player.flavorLikes ?? []} onShare={onShareHobby} />
+
+                    <button onClick={onMoodCheck}>Mood Check-in</button>
+                </div>
+            </section>
+
+            <LogPanel logs={logs} memories={pair.sharedMemories} />
         </div>
-      </section>
-
-      <section className="card">
-        <h2>Actions</h2>
-        <div className="actions">
-          <button onClick={onGreeting}>Greeting</button>
-
-          <ActionDiscuss options={activityOptions} onChoose={onDiscuss} />
-
-          <ActionGift gifts={giftOptions} onChoose={onGift} />
-
-          <ActionBoast onClick={onBoast} />
-
-          <ActionMood moods={moodKeys} npcMood={npc.currentMood} onSet={onMoodSet} />
-
-          <button onClick={onMoodCheck}>Mood Check-in</button>
-        </div>
-      </section>
-
-      <LogPanel logs={logs} memories={pair.sharedMemories} />
-    </div>
-  );
+    );
 }
