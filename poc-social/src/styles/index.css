@@ -103,3 +103,40 @@ footer {
   opacity: 0.8;
   margin-top: 8px;
 }
+
+/* Two-column area for Actions (left) and Log (right) */
+.split {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) 2fr;
+  gap: 16px;
+  align-items: start;
+  margin-top: 16px;
+}
+
+/* Ensure cards inside split stretch only by content */
+.split .card {
+  height: auto;
+}
+
+/* Optional: sticky card titles inside scrolling content */
+.card > h2 {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-top: 4px;
+  margin-top: -4px;
+}
+
+/* Log styles */
+.log {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  line-height: 1.4;
+}
+.logline + .logline { margin-top: 6px; }
+
+/* Mobile: stack columns */
+@media (max-width: 900px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
