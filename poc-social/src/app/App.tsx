@@ -1,17 +1,13 @@
-// src/app/App.tsx
 import { useMemo, useState } from "react";
 import "@styles/index.css";
 
-// ---- Data (read-only) ----
-import {
-  personalities,
-  activities,
-  moods,
-} from "@data";
+// Data (read-only)
+import { personalities, activities, moods } from "@data";
+import type { ActivityKey, MoodKey, PersonalityKey } from "@data";
 import { defaultPlayerSeed } from "@data/seeds/player.default";
 import { npcRook } from "@data/seeds/npc.rook";
 
-// ---- Domain (game rules, no React) ----
+// Domain (no React inside)
 import { newPair, setMood } from "@domain/characters/factory";
 import type { Character, PairState } from "@domain/characters/types";
 import { levelFromScore } from "@domain/relationships/scoring";
@@ -19,23 +15,12 @@ import { decaySimple } from "@domain/relationships/decay";
 import { performAction } from "@domain/actions/apply";
 import { pickAndRender } from "@domain/dialogue/engine";
 
-// ---- Types from data layer ----
-import type { ActivityKey, MoodKey, PersonalityKey } from "@data";
+// Screens
+import { CreateCharacterScreen } from "@ui/screens/CreateCharacterScreen";
+import { CampScreen } from "@ui/screens/CampScreen";
 
-// ===== UI-local types =====
+// UI-local
 type LogEntry = { id: string; text: string };
-
-// ===== TEMP catalog (move to data/schema/items.ts when ready) =====
-const DEFAULT_GIFTS = [
-  "polished_stone",
-  "fresh_herbs",
-  "carved_token",
-  "quality_oil",
-  "good_rope",
-  "sharp_knife",
-] as const;
-
-// ===== Helpers =====
 const newId = () => "log_" + Math.random().toString(36).slice(2);
 const now = () => Date.now();
 
@@ -54,29 +39,21 @@ export default function App() {
   const [pair, setPair] = useState<PairState | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
-  // Keys for selects
+  // Options for dropdowns with pretty labels
   const personalityKeys = Object.keys(personalities) as PersonalityKey[];
-  const activityKeys = Object.keys(activities) as ActivityKey[];
+  const activityOptions = useMemo(
+    () => (Object.keys(activities) as ActivityKey[]).map((k) => ({ key: k, label: activities[k].name })),
+    []
+  );
   const moodKeys = Object.keys(moods) as MoodKey[];
 
-  // Gifts available to choose from (union of defaults + each character's prefs)
-  const giftOptions = useMemo(() => {
-    if (!player || !npc) return [...DEFAULT_GIFTS];
-    return Array.from(
-      new Set<string>([
-        ...DEFAULT_GIFTS,
-        ...player.favoriteGifts,
-        ...npc.favoriteGifts,
-      ])
-    );
-  }, [player, npc]);
-
+  // Derived
   const relLevel = useMemo(
     () => (pair ? levelFromScore(pair.relationshipScore) : "neutral"),
     [pair]
   );
 
-  // ===== Actions =====
+  // ===== Bootstrapping =====
   function startGame() {
     const p: Character = structuredClone(defaultPlayerSeed);
     p.name = name;
@@ -93,17 +70,16 @@ export default function App() {
     setView("interact");
   }
 
+  // ===== Utilities =====
   function addLines(lines: string[]) {
-    setLogs((prev) => [...prev, ...lines.map((text) => ({ id: newId(), text }))]);
-    // force react to notice in-place mutations inside domain
-    setPair((prev) => (prev ? { ...prev } : prev));
-    setPlayer((prev) => (prev ? { ...prev } : prev));
-    setNpc((prev) => (prev ? { ...prev } : prev));
+    setLogs((prev: LogEntry[]) => [...prev, ...lines.map((text) => ({ id: newId(), text }))]);
+    setPair((prev: PairState | null) => (prev ? { ...prev } : prev));
+    setPlayer((prev: Character | null) => (prev ? { ...prev } : prev));
+    setNpc((prev: Character | null) => (prev ? { ...prev } : prev));
   }
 
   function onTick() {
     if (!player || !npc || !pair) return;
-    // expire moods
     const t = now();
     for (const c of [player, npc]) {
       if (c.moodExpiresAt && c.moodExpiresAt < t) {
@@ -111,25 +87,15 @@ export default function App() {
         c.moodExpiresAt = undefined;
       }
     }
-    // decay shared memories
     decaySimple(t, pair);
-
-    // poke React
-    setPair({ ...pair });
-    setPlayer({ ...player });
-    setNpc({ ...npc });
+    setPair({ ...pair }); setPlayer({ ...player }); setNpc({ ...npc });
   }
 
+  // ===== Action handlers (call domain, format text) =====
   function handleGreeting() {
     if (!player || !npc || !pair) return;
-    const dlg = pickAndRender(player, npc, pair, {
-      now: now(),
-      vars: { targetName: npc.name },
-    });
-    if (!dlg) {
-      addLines([`No greeting available.`]);
-      return;
-    }
+    const dlg = pickAndRender(player, npc, pair, { now: now(), vars: { targetName: npc.name } });
+    if (!dlg) return addLines([`No greeting available.`]);
     addLines([
       `${player.name}: ${dlg.opener}`,
       `${npc.name}: ${dlg.response}`,
@@ -144,10 +110,7 @@ export default function App() {
       activity,
       vars: { activity, targetName: npc.name },
     });
-    if (!dlg) {
-      addLines([`They don't feel like discussing ${activity} right now.`]);
-      return;
-    }
+    if (!dlg) return addLines([`They don't feel like discussing ${activities[activity].name} right now.`]);
     addLines([
       `${player.name}: ${dlg.opener}`,
       `${npc.name}: ${dlg.response}`,
@@ -159,13 +122,8 @@ export default function App() {
     if (!player || !npc || !pair) return;
     const t = now();
     const outcome = performAction("give_gift", player, npc, pair, t, { gift });
-    addLines([
-      `${player.name} offers ${npc.name} a ${gift}. (p=${outcome.chance.toFixed(
-        2
-      )} roll=${outcome.roll.toFixed(2)})`,
-    ]);
+    addLines([`${player.name} offers ${npc.name} a ${gift}. (p=${outcome.chance.toFixed(2)} roll=${outcome.roll.toFixed(2)})`]);
 
-    // Gift reaction dialogue is authored as NPC opener → Player response
     const dlg = pickAndRender(npc, player, pair, {
       now: t,
       triggered: { key: "give_gift", success: outcome.success },
@@ -182,21 +140,39 @@ export default function App() {
     }
   }
 
+  function handleBoast() {
+    if (!player || !npc || !pair) return;
+    const t = now();
+    const outcome = performAction("boast", player, npc, pair, t);
+    addLines([`${player.name} boasts. (p=${outcome.chance.toFixed(2)} roll=${outcome.roll.toFixed(2)})`]);
+
+    // For boast, player is the opener (actor)
+    const dlg = pickAndRender(player, npc, pair, {
+      now: t,
+      triggered: { key: "boast", success: outcome.success },
+      vars: { targetName: npc.name },
+    });
+    if (dlg) {
+      addLines([
+        `${player.name}: ${dlg.opener}`,
+        `${npc.name}: ${dlg.response}`,
+        `${player.name}: ${dlg.resolution}`,
+      ]);
+    }
+  }
+
+  function handleMoodSet(m?: MoodKey) {
+    if (!npc) return;
+    setMood(npc, m);
+    setNpc({ ...npc });
+  }
+
   function handleMoodCheck() {
     if (!player || !npc || !pair) return;
     const t = now();
-    // Perform an "offer_comfort" action to record mechanics effects (rel + memory).
     const outcome = performAction("offer_comfort", player, npc, pair, t);
-    addLines([
-      `${player.name} checks in. (p=${outcome.chance.toFixed(
-        2
-      )} roll=${outcome.roll.toFixed(2)})`,
-    ]);
-
-    const dlg = pickAndRender(player, npc, pair, {
-      now: t,
-      vars: { targetName: npc.name },
-    });
+    addLines([`${player.name} checks in. (p=${outcome.chance.toFixed(2)} roll=${outcome.roll.toFixed(2)})`]);
+    const dlg = pickAndRender(player, npc, pair, { now: t, vars: { targetName: npc.name } });
     if (dlg) {
       addLines([
         `${player.name}: ${dlg.opener}`,
@@ -209,247 +185,39 @@ export default function App() {
   // ===== Render =====
   if (view === "create") {
     return (
-      <div className="wrap">
-        <h1>PoC — Social System</h1>
-
-        <section className="card">
-          <h2>Character Creation</h2>
-          <div className="grid2">
-            <label>
-              Name
-              <input value={name} onChange={(e) => setName(e.target.value)} />
-            </label>
-
-            <label>
-              Primary Personality
-              <select
-                value={primary}
-                onChange={(e) => setPrimary(e.target.value as PersonalityKey)}
-              >
-                {personalityKeys.map((k) => (
-                  <option key={k} value={k}>
-                    {k}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Strength: {strength}
-              <input
-                type="range"
-                min={1}
-                max={10}
-                value={strength}
-                onChange={(e) => setStrength(Number(e.target.value))}
-              />
-            </label>
-
-            <label>
-              Charisma: {charisma}
-              <input
-                type="range"
-                min={1}
-                max={10}
-                value={charisma}
-                onChange={(e) => setCharisma(Number(e.target.value))}
-              />
-            </label>
-          </div>
-
-          <button className="primary" onClick={startGame}>
-            Start → Interact with NPC
-          </button>
-        </section>
-
-        <footer>We’ll add more creator fields as your schema grows.</footer>
-      </div>
+      <CreateCharacterScreen
+        name={name}
+        primary={primary}
+        strength={strength}
+        charisma={charisma}
+        personalityKeys={personalityKeys}
+        onName={setName}
+        onPrimary={setPrimary}
+        onStrength={setStrength}
+        onCharisma={setCharisma}
+        onStart={startGame}
+      />
     );
   }
 
-  // --- Interact view ---
   if (!player || !npc || !pair) return null;
 
   return (
-    <div className="wrap">
-      <h1>PoC — Social System</h1>
-
-      <section className="card">
-        <h2>Camp</h2>
-        <div className="row">
-          <div className="col">
-            <h3>Player</h3>
-            <p>
-              <b>{player.name}</b> ({player.primaryPersonality})
-            </p>
-            <p>
-              STR {player.stats.strength} | CHA {player.stats.charisma}
-            </p>
-            <p>Mood: {player.currentMood ?? "—"}</p>
-          </div>
-
-          <div className="col">
-            <h3>NPC</h3>
-            <p>
-              <b>{npc.name}</b> ({npc.primaryPersonality})
-            </p>
-            <p>
-              STR {npc.stats.strength} | CHA {npc.stats.charisma}
-            </p>
-            <p>Mood: {npc.currentMood ?? "—"}</p>
-          </div>
-
-          <div className="col">
-            <h3>Relationship</h3>
-            <p>
-              Score: <b>{pair.relationshipScore}</b>
-            </p>
-            <p>
-              Level: <b>{relLevel}</b>
-            </p>
-            <button onClick={onTick}>Tick (expire moods / decay memories)</button>
-          </div>
-        </div>
-      </section>
-
-      <section className="card">
-        <h2>Actions</h2>
-        <div className="actions">
-          <button onClick={handleGreeting}>Greeting</button>
-
-          <ActionDiscuss
-            activities={activityKeys}
-            onChoose={(a) => handleDiscussActivity(a)}
-          />
-
-          <ActionGift
-            gifts={giftOptions}
-            onChoose={(g) => handleGift(g)}
-          />
-
-          <ActionMood
-            moods={moodKeys}
-            npc={npc}
-            onSet={(m) => {
-              setMood(npc, m);
-              setNpc({ ...npc });
-            }}
-          />
-
-          <button onClick={handleMoodCheck}>Mood Check-in</button>
-        </div>
-      </section>
-
-      <section className="card">
-        <h2>Log</h2>
-        <div className="log">
-          {logs.map((l) => (
-            <div key={l.id} className="logline">
-              {l.text}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="card">
-        <h2>Debug</h2>
-        <details>
-          <summary>Shared memories ({pair.sharedMemories.length})</summary>
-          <ul>
-            {pair.sharedMemories.map((m) => (
-              <li key={m.id}>
-                <code>[{m.weight}]</code> {m.text}
-              </li>
-            ))}
-          </ul>
-        </details>
-      </section>
-    </div>
-  );
-}
-
-// ===== Tiny helper subcomponents (UI-only; presentational) =====
-function ActionDiscuss({
-  activities,
-  onChoose,
-}: {
-  activities: ReadonlyArray<ActivityKey>;
-  onChoose: (a: ActivityKey) => void;
-}) {
-  const [a, setA] = useState<ActivityKey>("sparring");
-  return (
-    <div className="row">
-      <label>
-        Activity
-        <select
-          value={a}
-          onChange={(e) => setA(e.target.value as ActivityKey)}
-        >
-          {activities.map((k) => (
-            <option key={k} value={k}>
-              {k}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button onClick={() => onChoose(a)}>Discuss Activity</button>
-    </div>
-  );
-}
-
-function ActionGift({
-  gifts,
-  onChoose,
-}: {
-  gifts: ReadonlyArray<string>;
-  onChoose: (g: string) => void;
-}) {
-  const [g, setG] = useState(gifts[0] ?? "");
-  return (
-    <div className="row">
-      <label>
-        Gift
-        <select value={g} onChange={(e) => setG(e.target.value)}>
-          {gifts.map((k) => (
-            <option key={k} value={k}>
-              {k}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button disabled={!g} onClick={() => onChoose(g)}>
-        Give Gift
-      </button>
-    </div>
-  );
-}
-
-function ActionMood({
-  moods,
-  npc,
-  onSet,
-}: {
-  moods: ReadonlyArray<MoodKey>;
-  npc: Character;
-  onSet: (m?: MoodKey) => void;
-}) {
-  const [m, setM] = useState<MoodKey | "none">("none");
-  return (
-    <div className="row">
-      <label>
-        Set NPC Mood (dev)
-        <select value={m} onChange={(e) => setM(e.target.value as any)}>
-          <option value="none">none</option>
-          {moods.map((k) => (
-            <option key={k} value={k}>
-              {k}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button onClick={() => onSet(m === "none" ? undefined : (m as MoodKey))}>
-        Apply
-      </button>
-    </div>
+    <CampScreen
+      player={player}
+      npc={npc}
+      pair={pair}
+      relationshipLevel={relLevel}
+      activityOptions={activityOptions}
+      moodKeys={moodKeys}
+      logs={logs}
+      onTick={onTick}
+      onGreeting={handleGreeting}
+      onDiscuss={handleDiscussActivity}
+      onGift={handleGift}
+      onBoast={handleBoast}
+      onMoodSet={handleMoodSet}
+      onMoodCheck={handleMoodCheck}
+    />
   );
 }
