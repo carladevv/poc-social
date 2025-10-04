@@ -1,73 +1,86 @@
 # React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is a proof of concept for a dialogue/social system between user-created characters. It aims for maximum flexibility and variation while keeping the number of variables and constraints reasonable.
 
-Currently, two official plugins are available:
+## Folder structure
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+src/
+  app/                      # App shell & routes (keeps React app wiring separate)
+    App.tsx
+    main.tsx
+  ui/                       # Pure presentational components (buttons, pickers, panels)
+    components/
+      Button.tsx
+      Field.tsx
+      Select.tsx
+      LogPanel.tsx
+      StatsMeter.tsx
+    screens/
+      CreateCharacterScreen.tsx
+      CampScreen.tsx
+  state/                    # App state (store + selectors), no domain logic
+    store.ts                # Zustand/Context or simple reducers
+    selectors.ts
+    types.ts                # UI-level state shapes only
+  domain/                   # Game domain, framework-agnostic (NO React imports here)
+    characters/
+      types.ts              # Character types only
+      factory.ts            # Create character from inputs
+      validators.ts         # (Optional) zod/yup validation for creation form
+    relationships/
+      types.ts              # Relationship types only
+      scoring.ts            # +/− relationship adjustments
+      decay.ts              # memory decay, mood expiry
+    memories/
+      types.ts
+      create.ts             # addMemory, compose memory text, tagging
+    actions/                # Mechanics for social actions (no UI)
+      types.ts              # SocialAction types only
+      success.ts            # successChance(...) ONLY
+      apply.ts              # How an action mutates pair state + memories
+    dialogue/               # Dialogue engine (selection + rendering), SRP-per-file
+      types.ts              # Template & rendering types only
+      gates.ts              # Template gating (conditions)
+      rank.ts               # (Optional) scoring/weighting when many templates match
+      render.ts             # Interpolate vars, pick lines, 3-sentence stitcher
+      engine.ts             # Public API: pickAndRender(ctx) using the above files
+      registry.ts           # Auto-load & index templates from templates/**
+      templates/            # Each template is its own file; grouped in folders
+        greetings/
+          casual.ts
+          formal.ts
+        activities/
+          sparring.ts
+          cooking.ts
+          archery.ts
+        social/
+          gift/
+            success.ts
+            fail.ts
+          boast.ts
+          offer_comfort.ts
+        memory/
+          callbacks.ts
+  data/                     # Static game data; no logic
+    schema/                 # Each schema in its own file
+      personalities.ts
+      activities.ts
+      moods.ts
+      socialActions.ts
+      relationshipLevels.ts
+      memoryWeights.ts
+    index.ts                # Re-export schemas; read-only constants
+    seeds/                  # Seed characters/world
+      npc.rook.ts
+      player.default.ts
+  lib/                      # Small generic utilities (no domain knowledge)
+    rng.ts                  # randomPick, weightedPick
+    time.ts                 # now(), clampMs, durations
+    strings.ts              # safeReplace, capitalize, etc.
+  config/
+    paths.d.ts              # (Optional) path aliases typings
+  styles/
+    index.css
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
